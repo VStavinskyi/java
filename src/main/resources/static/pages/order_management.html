@@ -106,7 +106,7 @@
     </div>
 
     <script>
-        const host = 'http://localhost:8080';
+        const host = 'https://java-restaurant.herokuapp.com';
         const worker_selector = $('#worker-selector');
         const product_selector = $('#product-selector');
         const workers = $('#workers');
@@ -335,7 +335,7 @@
                     contentType: 'application/json',
                     data: JSON.stringify(request),
                     success: function () {
-                        window.location.href = "http://localhost:8080/menu";
+                        window.location.href = "https://java-restaurant.herokuapp.com/menu";
                     },
                     error: console.log
                 });
@@ -346,7 +346,7 @@
                     contentType: 'application/json',
                     data: JSON.stringify(request),
                     success: function () {
-                        window.location.href = "http://localhost:8080/menu";
+                        window.location.href = "https://java-restaurant.herokuapp.com/menu";
                     },
                     error: console.log
                 });
@@ -355,7 +355,7 @@
         });
 
         $('#cancel-button').click(() => {
-            window.location.href = "http://localhost:8080/menu"
+            window.location.href = "https://java-restaurant.herokuapp.com/menu"
         });
 
         $( ".w-selector" ).change(function() {

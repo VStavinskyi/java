@@ -69,7 +69,7 @@
 
 <script>
 
-    let host = 'http://localhost:8080';
+    let host = 'https://java-restaurant.herokuapp.com';
     let $email = $('#email1');
     let $password = $('#pass1');
 
@@ -106,7 +106,7 @@
             success: (response) => {
                 window.localStorage.setItem('userId', response.id);
             //    location.replace("pages/main.html?id="+response.id);
-                window.location.href = "http://localhost:8080/menu"
+                window.location.href = "https://java-restaurant.herokuapp.com/menu"
             }
         });
     };

@@ -122,8 +122,7 @@
 
 <script>
     let selector = $('#selector');
-    let host = 'http://localhost:8080';
-
+    let host = 'https://java-restaurant.herokuapp.com';
     let $pageNumber = $('.page-number');
     let $pageSize = $('.page-size');
     let pages = 0;
@@ -259,7 +258,7 @@
     });
 
     let getRestaurans = () => {
-        let url = "http://localhost:8080/restaurant/allByUser?userId=" + userId;
+        let url = "https://java-restaurant.herokuapp.com/restaurant/allByUser?userId=" + userId;
 
         selector.html('');
         selector.append(`<option value="" disabled selected>Choose your restaurant to manage</option>`);
@@ -347,7 +346,7 @@
 
         $.ajax({
             async: false,
-            url: `http://localhost:8080/order/byTableId?placeId=${tableInfo.id}`,
+            url: `https://java-restaurant.herokuapp.com/order/byTableId?placeId=${tableInfo.id}`,
             type: 'get',
             success: function (data) {
                 order = data;
@@ -422,7 +421,7 @@
             window.localStorage.setItem('tableId', tableId);
             window.localStorage.setItem('orderId', 0);
 
-            window.location.href = "http://localhost:8080/management"
+            window.location.href = "https://java-restaurant.herokuapp.com/management"
 
             // відкрити форму створення нового ордера (передати туди - плейс ід)
             // наповнити замовлення або скасувати
@@ -445,7 +444,7 @@
 
             $.ajax({
                 async: false,
-                url: `http://localhost:8080/order/byTableId?placeId=${tableId}`,
+                url: `https://java-restaurant.herokuapp.com/order/byTableId?placeId=${tableId}`,
                 type: 'get',
                 success: function (data) {
                     order = data;
@@ -454,7 +453,7 @@
 
             window.localStorage.setItem('orderId', order.id);
 
-            window.location.href = "http://localhost:8080/management"
+            window.location.href = "https://java-restaurant.herokuapp.com/management"
         });
     };
 
@@ -474,7 +473,7 @@
 
             $.ajax({
                 async: false,
-                url: `http://localhost:8080/order/byTableId?placeId=${tableId}`,
+                url: `https://java-restaurant.herokuapp.com/order/byTableId?placeId=${tableId}`,
                 type: 'get',
                 success: function (data) {
                     order = data;
