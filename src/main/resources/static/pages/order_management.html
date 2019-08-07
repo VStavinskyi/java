@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Front runner</title>
+    <link rel="SHORTCUT ICON" href="images/favicon.ico" type="image/ico">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+            integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <style>
+        body {
+            background-color: wheat;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="create-modal-worker" class="modal">
+    <div class="modal-content">
+        <input type="text" id="new-worker-name" placeholder="name">
+        <input type="text" id="new-surname" placeholder="surname">
+    </div>
+    <div class="modal-footer">
+        <button class="btn" id="create-button-worker">
+            Submit
+        </button>
+        <button class="btn" id="cancel-button-worker">
+            Cancel
+        </button>
+    </div>
+</div>
+<button data-target="create-modal-worker" class="btn modal-trigger">Create worker</button>
+
+
+    <div class="col s12">
+        <select class="w-selector" id="worker-selector">
+        </select>
+        <label>Available workers</label>
+    </div>
+
+    <div>
+        <table>
+            <thead>
+            <tr>
+                <th>Worker</th>
+            </tr>
+            </thead>
+
+            <tbody id="workers">
+            </tbody>
+        </table>
+    </div>
+
+
+<div id="create-modal-product" class="modal">
+    <div class="modal-content">
+        <input type="text" id="new-product-name" placeholder="item's name">
+        <input type="number" id="new-price" placeholder="price">
+        <input type="number" id="new-calorie" placeholder="calorie">
+        <input type="text" id="new-recipe" placeholder="recipe">
+    </div>
+    <div class="modal-footer">
+        <button class="btn" id="create-button-product">
+            Submit
+        </button>
+        <button class="btn" id="cancel-button-product">
+            Cancel
+        </button>
+    </div>
+</div>
+<button data-target="create-modal-product" class="btn modal-trigger">Create product</button>
+
+    <div class="col s12">
+        <select class="p-selector" id="product-selector">
+        </select>
+        <label>Available products</label>
+    </div>
+
+    <div>
+        <table>
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Count</th>
+            </tr>
+            </thead>
+
+            <tbody id="products">
+            </tbody>
+        </table>
+    </div>
+
+    <p>
+    </p>
+
+    <div class="modal-footer">
+        <button class="btn" id="create-button">
+            Submit
+        </button>
+        <button class="btn" id="cancel-button">
+            Cancel
+        </button>
+    </div>
+
+    <script>
+        const host = 'http://localhost:8080';
+        const worker_selector = $('#worker-selector');
+        const product_selector = $('#product-selector');
+        const workers = $('#workers');
+        const products = $('#products');
+
+        const userId = window.localStorage.getItem('userId');
+        const restaurantId = window.localStorage.getItem('restaurantId');
+        const tableId = window.localStorage.getItem('tableId');
+        const orderId = window.localStorage.getItem('orderId');
+
+        $(document).ready(function(){
+            let $modal1 = $('#create-modal-worker');
+            let $nameInput1 = $('#new-worker-name');
+            let $surnameInput = $('#new-surname');
+            $modal1.modal({
+                onCloseStart: () => {
+                    $nameInput1.val('');
+                    $surnameInput.val('');
+                }
+            });
+
+            $('#cancel-button-worker').click(() => {
+                $modal1.modal('close');
+            });
+            $('#create-button-worker').click(() => {
+
+                let request = {
+                    name: $nameInput1.val(),
+                    surname: $surnameInput.val()
+                };
+                $.ajax({
+                    url: `${host}/worker`,
+                    type: 'post',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        fillWorkerSelector();
+                    },
+                    error: console.log
+                });
+                $modal1.modal('close');
+            });
+
+            let $modal2 = $('#create-modal-product');
+            let $nameInput2 = $('#new-product-name');
+            let $priceInput = $('#new-price');
+            let $calorieInput = $('#new-calorie');
+            let $recipeInput = $('#new-recipe');
+            $modal2.modal({
+                onCloseStart: () => {
+                    $nameInput2.val('');
+                    $priceInput.val('');
+                    $calorieInput.val('');
+                    $recipeInput.val('');
+                }
+            });
+
+            $('#cancel-button-product').click(() => {
+                $modal2.modal('close');
+            });
+            $('#create-button-product').click(() => {
+
+                let request = {
+                    name: $nameInput2.val(),
+                    price: $priceInput.val(),
+                    calorie: $calorieInput.val(),
+                    recipe: $recipeInput.val()
+                };
+                $.ajax({
+                    url: `${host}/product`,
+                    type: 'post',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        fillProductSelector();
+                    },
+                    error: console.log
+                });
+                $modal2.modal('close');
+            });
+
+
+
+
+            if (+orderId===0) { // якщо orderId = 0 - тоді це новий ордер
+                getWorkersForSelector([]);
+                getProductsForSelector([]);
+            } else {
+                getDataForCurrentOrder();
+            }
+        });
+
+        const getDataForCurrentOrder = () => {
+            var order;
+
+            $.ajax({
+                async: false,
+                url: `${host}/order/byTableId?placeId=${tableId}`,
+                type: 'get',
+                success: function (data) {
+                    order = data;
+                }
+            });
+
+            getWorkersForSelector(order.workers);
+            getProductsForSelector(order.products);
+        };
+
+        const getWorkersForSelector = (currentWorkers) => {
+            appendWorkers(currentWorkers); // потрібно витягни всіх працівників - додати їх в селектор, тільки за винятком тих, що в параметрі
+            fillWorkerSelector();  // далі заповнити селектор
+        };
+
+        const getProductsForSelector = (currentProductCounts) => {
+            appendProducts(currentProductCounts); // потрібно витягни всі продукти - додати їх в селектор, тільки за винятком тих, що в параметрі
+            fillProductSelector(); // далі заповнити селектор
+        };
+
+        const appendWorkers = (currentWorkers) => {
+            // додати кнопку видалити з Ордера
+            // додати атрибут ІД воркера
+            workers.html('');
+            window.localStorage.setItem('workers', JSON.stringify(currentWorkers));
+            for (let worker of currentWorkers) {
+                workers.append(
+                    `<tr>
+                        <td data-id="${worker.id}" class="worker">${worker.name} ${worker.surname}</td>
+                        <td>
+                            <button data-id="${worker.id}" class="delete-btn btn">Delete</button>
+                        </td>
+                    </tr>`
+                );
+            }
+            actionOnDeleteButton();
+        };
+
+        const appendProducts = (currentProductCounts) => {
+            // додати кнопку видалити з Ордера
+            // додати атрибут ІД ПродуктКаунт
+            products.html('');
+            window.localStorage.setItem('productCounts', JSON.stringify(currentProductCounts));
+            for (let productCount of currentProductCounts) {
+                products.append(
+                    `<tr>
+                        <td data-id="${productCount.productResponse.id}" class="name">${productCount.productResponse.name}</td>
+                        <td class="price">${productCount.productResponse.price}</td>
+                        <td class="count">
+                            <input type="number" placeholder="count to order" value=${productCount.count}>
+                        </td>
+                        <td>
+                            <button data-id="${productCount.productResponse.id}" class="delete-btn btn">Delete</button>
+                        </td>
+                    </tr>`);
+            }
+            actionOnDeleteButton();
+        };
+
+        let actionOnDeleteButton = () => {
+            $('.delete-btn').click((e) => {
+                $(e.target).closest('tr').remove();
+            });
+        }
+
+        const fillWorkerSelector = () => {
+            worker_selector.html('');
+            worker_selector.append(`<option value="" disabled selected>Attach worker to order</option>`);
+            $.ajax({
+                url: `${host}/worker`,
+                type: 'get',
+                success: (response) => {
+                    for (let worker of response) {
+                        worker_selector.append(`<option value=${worker.id}>${worker.name} ${worker.surname}</option>`);
+                    }
+                    $('select').formSelect();
+                }
+            });
+        };
+
+        const fillProductSelector = () => {
+            product_selector.html('');
+            product_selector.append(`<option value="" disabled selected>Add product to order</option>`);
+            $.ajax({
+                url: `${host}/product`,
+                type: 'get',
+                success: (response) => {
+                    for (let product of response) {
+                        product_selector.append(`<option value=${product.id}>${product.name} [${product.price}]</option>`);
+                    }
+                    $('select').formSelect();
+                }
+            });
+        };
+
+        $('#create-button').click(() => {
+            let workersList = [];
+            for (let child of workers.children()) {
+                workersList.push(+child.children[0].attributes[0].nodeValue);
+            }
+            workersList.includes()
+
+            let productList = [];
+            let sum = 0;
+            for (let child1 of products.children()) { // productCount
+                let currentPrice = +child1.children[1].innerText;
+                let currentCount = +child1.children[2].children[0].value;
+                sum = sum + currentPrice*currentCount;
+                productList.push({
+                    productId: +child1.children[0].attributes[0].nodeValue,
+                    count: currentCount
+                });
+            }
+
+            let request = {
+                closed: false,
+                sum: sum,
+                discount: 0,
+                placeId: tableId,
+                workersId: workersList,
+                products: productList
+            };
+
+            if (+orderId!==0) {
+                $.ajax({
+                    url: `${host}/order?id=${orderId}`,
+                    type: 'put',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        window.location.href = "http://localhost:8080/menu";
+                    },
+                    error: console.log
+                });
+            } else {
+                $.ajax({
+                    url: `${host}/order`,
+                    type: 'post',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        window.location.href = "http://localhost:8080/menu";
+                    },
+                    error: console.log
+                });
+            }
+
+        });
+
+        $('#cancel-button').click(() => {
+            window.location.href = "http://localhost:8080/menu"
+        });
+
+        $( ".w-selector" ).change(function() {
+            // треба провірити чи воркер вже є ордері
+            let workersList = [];
+            for (let child of workers.children()) {
+                workersList.push(+child.children[0].attributes[0].nodeValue);
+            }
+
+            if (workersList.includes(+worker_selector.val())=== false) {
+                workers.append(
+                    `<tr>
+                     <td data-id="${worker_selector.val()}" class="worker">${worker_selector[0].selectedOptions[0].innerText}</td>
+                 </tr>`
+                );
+            } else {
+                alert("This worker already in order");
+            }
+        });
+
+        $( ".p-selector" ).change(function() {
+            // треба провірити чи продукт вже є ордері
+            var cur_pr;
+
+            $.ajax({
+                async: false,
+                url: `${host}/product/findOne?id=${product_selector.val()}`,
+                type: 'get',
+                success: function (data) {
+                    cur_pr = data;
+                }
+            });
+
+            let productList = [];
+            for (let child1 of products.children()) { // productCount
+                productList.push(+child1.children[0].attributes[0].nodeValue);
+            }
+
+            if (productList.includes(+product_selector.val())=== false) {
+                products.append(
+                    `<tr>
+                        <td data-id="${cur_pr.id}" class="name">${cur_pr.name}</td>
+                        <td class="price">${cur_pr.price}</td>
+                        <td class="count">
+                            <input type="number" placeholder="count to order" value=0>
+                        </td>
+                    </tr>`);
+            } else {
+                alert("This product already in order");
+            }
+        });
+
+
+    </script>
+
+    </body>
+
+</html>

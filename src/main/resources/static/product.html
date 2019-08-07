@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Items</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+</head>
+<body>
+
+<div id="create-modal" class="modal">
+    <div class="modal-content">
+        <input type="text" id="new-name" placeholder="item's name">
+        <input type="number" id="new-price" placeholder="price">
+        <input type="number" id="new-calorie" placeholder="calorie">
+        <input type="text" id="new-recipe" placeholder="recipe">
+    </div>
+    <div class="modal-footer">
+        <button class="btn" id="create-button">
+            Submit
+        </button>
+        <button class="btn" id="cancel-button">
+            Cancel
+        </button>
+    </div>
+</div>
+<button data-target="create-modal" class="btn modal-trigger">Create item</button>
+
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Calorie</th>
+        <th>Recipe</th>
+        <th></th>
+        <th></th>
+    </tr>
+    </thead>
+
+    <tbody id="elements">
+    </tbody>
+</table>
+
+<script>
+    let host = 'http://localhost:8080';
+    $(document).ready(function() {
+        let $modal = $('#create-modal');
+        let $nameInput = $('#new-name');
+        let $priceInput = $('#new-price');
+        let $calorieInput = $('#new-calorie');
+        let $recipeInput = $('#new-recipe');
+        $modal.modal({
+            onCloseStart: () => {
+                $nameInput.val('');
+                $priceInput.val('');
+                $calorieInput.val('');
+                $recipeInput.val('');
+                $nameInput.attr('data-id', '');
+            }
+        });
+
+        $('#cancel-button').click(() => {
+            $modal.modal('close');
+        });
+        $('#create-button').click(() => {
+
+            let request = {
+                name: $nameInput.val(),
+                price: $priceInput.val(),
+                calorie: $calorieInput.val(),
+                recipe: $recipeInput.val()
+            };
+            let id = $nameInput.attr('data-id');
+            if (id) {
+                $.ajax({
+                    url: `${host}/product?id=${id}`,
+                    type: 'put',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        getElements();
+                    },
+                    error: console.log
+                });
+            } else {
+                $.ajax({
+                    url: `${host}/product`,
+                    type: 'post',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        getElements();
+                    },
+                    error: console.log
+                });
+            }
+            $modal.modal('close');
+        });
+        let tableBody = $('#elements');
+
+        let appendElementToTable = (element) => {
+            tableBody.append(`
+            <tr>
+                <td>${element.id}</td>
+                <td class="name">${element.name}</td>
+                <td class="price">${element.price}</td>
+                <td class="calorie">${element.calorie}</td>
+                <td class="recipe">${element.recipe}</td>
+                <td>
+                    <button data-id="${element.id}" class="delete-btn btn">Delete</button>
+                    <button data-id="${element.id}" class="update-btn btn">Update</button>
+                </td>
+            </tr>
+        `);
+        };
+
+        let actionOnDeleteButtons = () => {
+            $('.delete-btn').click((e) => {
+                let id = $(e.target).attr('data-id');
+                $.ajax({
+                    url: `${host}/product?id=${id}`,
+                    type: 'delete',
+                    success: () => {
+                        $(e.target).closest('tr').hide();
+                    }
+                })
+            })
+        };
+        let actionOnUpdateButtons = () => {
+            $('.update-btn').click((e) => {
+                let $btn = $(e.target);
+                let id = $btn.attr('data-id');
+                $nameInput.val($btn.parent().siblings('.name').html())
+                $priceInput.val($btn.parent().siblings('.price').html())
+                $calorieInput.val($btn.parent().siblings('.calorie').html())
+                $recipeInput.val($btn.parent().siblings('.recipe').html())
+                $nameInput.attr('data-id', id);
+                $modal.modal('open');
+            })
+        };
+        let getElements = () => {
+            tableBody.html('');
+            $.ajax({
+                url: `${host}/product`,
+                type: 'get',
+                success: (response) => {
+                    for (let elem of response) {
+                        appendElementToTable(elem);
+                    }
+                    actionOnDeleteButtons();
+                    actionOnUpdateButtons();
+                }
+            });
+        };
+        getElements();
+    });
+</script>
+</body>
+</html>

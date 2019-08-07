@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Front runner</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="SHORTCUT ICON" href="images/favicon.ico" type="image/ico">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</head>
+<body>
+<div class="logo">
+    <img src="images/logo.png" width="100" height="111" alt="Front Runner" style="width:auto;">
+    <p style="color:#ff0000">by Vasyl Stavinskyi</p>
+</div>
+<div class="login-wrap">
+    <div class="login-html">
+        <input id="tab-1" type="radio" name="tab" class="sign-in" checked><label for="tab-1" class="tab">Sign in</label>
+        <input id="tab-2" type="radio" name="tab" class="sign-up"><label for="tab-2" class="tab">Sign up</label>
+        <div class="login-form">
+            <form class="sign-in-htm">
+                <div class="group">
+                    <label for="email1" class="label">E-mail</label>
+                    <input id="email1" name="email" type="email" class="input" required>
+                </div>
+                <div class="group">
+                    <label for="pass1" class="label">Password</label>
+                    <input id="pass1" name="password" type="password" class="input" data-type="password" required>
+                </div>
+                <div class="group">
+                    <input type="hidden" name="isPermanent" value="0">
+                    <input id="check" name="isPermanent" value="1" type="checkbox" class="check" checked>
+                    <label for="check"><span class="icon"></span> Remember me</label>
+                </div>
+                <div class="group">
+                    <input type="button" class="button" value="Sign in" onClick=Enter()>
+                </div>
+                <output class="error-message"></output>
+            </form>
+            <form class="sign-up-htm">
+                <div class="group">
+                    <label for="email2" class="label">E-mail</label>
+                    <input id="email2" name="email" required type="email" class="input">
+                </div>
+                <div class="group">
+                    <label for="pass2a" class="label">Password</label>
+                    <input id="pass2a" name="password" required type="password" class="input" data-type="password">
+                </div>
+                <div class="group">
+                    <label for="pass2b" class="label">Reenter password</label>
+                    <input id="pass2b" name="passwordcopy" required type="password" class="input" data-type="password">
+                </div>
+                <div class="group">
+                    <label for="pass2" class="label">Username</label>
+                    <input id="pass2" name="name" required type="text" class="input">
+                </div>
+                <div class="group">
+                    <input type="button" class="button" value="Sign up" onClick=registerAndEnter()>
+                </div>
+                <output class="error-message"></output>
+                <div class="hr"></div>
+                <div class="foot-lnk">
+                    <label for="tab-1">Have account?</label>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    let host = 'http://localhost:8080';
+    let $email = $('#email1');
+    let $password = $('#pass1');
+
+    let Enter = () => {
+        window.localStorage.setItem('restaurantId', 0);
+        userExist($email.val(), $password.val());
+    };
+
+    let registerAndEnter = () => {
+        window.localStorage.setItem('restaurantId', 0);
+        createNewUser();
+    }
+
+    let userExist = (email, password) => {
+        $.ajax({
+            url: `${host}/user/exist?email=${email}&password=${password}`,
+            type: 'get',
+            success: (response) => {
+                if (response===true) {
+                    getUser(email, password);
+                } else {
+                    $email.val('');
+                    $password.val('');
+                    alert("Wrong credentials")
+                }
+            }
+        });
+    };
+
+    let getUser = (email, password) => {
+        $.ajax({
+            url: `${host}/user/getByEmailAndPassword?email=${email}&password=${password}`,
+            type: 'get',
+            success: (response) => {
+                window.localStorage.setItem('userId', response.id);
+            //    location.replace("pages/main.html?id="+response.id);
+                window.location.href = "http://localhost:8080/menu"
+            }
+        });
+    };
+
+    let createNewUser = () => {
+
+        let $emailNew = $('#email2');
+        let $password1 = $('#pass2a');
+        let $password2 = $('#pass2b');
+        let $usernameNew = $('#pass2');
+
+        if ($password1.val()===$password2.val()) {
+            let request = {
+                username: $usernameNew.val(),
+                password: $password1.val(),
+                email: $emailNew.val()
+            };
+            $.ajax({
+                url: `${host}/user`,
+                type: 'post',
+                contentType: 'application/json',
+                data: JSON.stringify(request),
+                success: function () {
+                    getUser($emailNew.val(), $password1.val());
+                },
+                error: console.log
+            });
+        } else {
+            $password1.val('');
+            $password2.val('');
+            alert("Password don't equal reenter password")
+        }
+
+    };
+
+
+
+
+
+</script>
+
+</body>
+</html>

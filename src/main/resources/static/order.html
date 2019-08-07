@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orders</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+</head>
+<body>
+
+<div id="create-modal" class="modal">
+    <div class="modal-content">
+        <input type="number" id="new-state" placeholder="state of the order">
+        <input type="number" id="new-sum" placeholder="sum of items in the order">
+        <input type="number" id="new-discount" placeholder="discount">
+        <input type="number" id="new-place" placeholder="table id">
+        <form action="#" id="workers">
+        </form>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Count</th>
+            </tr>
+            </thead>
+
+            <tbody id="products">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn" id="create-button">
+            Submit
+        </button>
+        <button class="btn" id="cancel-button">
+            Cancel
+        </button>
+    </div>
+</div>
+<button data-target="create-modal" class="btn modal-trigger">Create new order</button>
+
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>State (is closed)</th>
+        <th>Sum</th>
+        <th>Discount</th>
+        <th>Table id</th>
+        <th>Worker ids</th>
+        <th>Product ids</th>
+        <th></th>
+        <th></th>
+    </tr>
+    </thead>
+
+    <tbody id="elements">
+    </tbody>
+</table>
+
+<script>
+    let host = 'http://localhost:8080';
+    $(document).ready(function() {
+
+        let $modal = $('#create-modal');
+        let $stateInput = $('#new-state');
+        let $sumInput = $('#new-sum');
+        let $discountInput = $('#new-discount');
+        let $placeInput = $('#new-place');
+
+        $modal.modal({
+            onCloseStart: () => {
+                getWorkers();
+                getProducts();
+                $stateInput.val('');
+                $sumInput.val('');
+                $discountInput.val('');
+                $placeInput.val('');
+                $stateInput.attr('data-id', '');
+            }
+        });
+
+        $('#cancel-button').click(() => {
+            $modal.modal('close');
+        });
+        $('#create-button').click(() => {
+            let isClosed = (+$stateInput.val() === 1)?true:false;
+
+            let workers = [1];//
+
+            let products = [{//
+                productId: 1,
+                count: 150
+            }]
+
+            let request = {
+                closed: isClosed,
+                sum: $sumInput.val(),
+                discount: $discountInput.val(),
+                placeId: $placeInput.val()
+            };
+            let id = $stateInput.attr('data-id');
+            if (id) {
+                $.ajax({
+                    url: `${host}/order?id=${id}`,
+                    type: 'put',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        getElements();
+                    },
+                    error: console.log
+                });
+            } else {
+                $.ajax({
+                    url: `${host}/order`,
+                    type: 'post',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        getElements();
+                    },
+                    error: console.log
+                });
+            }
+            $modal.modal('close');
+        });
+        let tableBody = $('#elements');
+        let workersContainer = $('#workers');
+        let productsContainer = $('#products');
+
+        let appendElementToTable = (element) => {
+            tableBody.append(`
+            <tr>
+                <td>${element.id}</td>
+                <td class="date">${element.date}</td>
+                <td class="time">${element.time}</td>
+                <td class="state">${element.closed}</td>
+                <td class="sum">${element.sum}</td>
+                <td class="discount">${element.discount}</td>
+                <td class="table">${element.place.id}</td>
+                <td class="workers">${element.workers}</td>
+                <td class="products">${element.products}</td>
+                <td>
+                    <button data-id="${element.id}" class="delete-btn btn">Delete</button>
+                    <button data-id="${element.id}" class="update-btn btn">Update</button>
+                </td>
+            </tr>
+        `);
+        };
+
+        let getWorkers = () => {
+
+            workersContainer.html('');
+            $.ajax({
+                url: `${host}/worker`,
+                type: 'get',
+                success: (response) => {
+                    for (let elem of response) {
+                        workersContainer.append(
+                            `<p>
+                                <label>
+                                    <input type="checkbox" class="filled-in"  />
+                                    <span>${elem.name} ${elem.surname}</span>
+                                </label>
+                            </p>`);
+                    }
+                }
+            });
+        };
+
+        let getProducts = () => {
+
+            productsContainer.html('');
+            $.ajax({
+                url: `${host}/product`,
+                type: 'get',
+                success: (response) => {
+                    for (let elem of response) {
+                        productsContainer.append(
+                        `<tr>
+                        <td class="name">${elem.name}</td>
+                            <td class="price">${elem.price} UAH</td>
+                            <td class="count">
+                                <input type="number" placeholder="count to order">
+                            </td>
+                            </tr>`);
+                    }
+                }
+            });
+        };
+
+        let actionOnDeleteButtons = () => {
+            $('.delete-btn').click((e) => {
+                let id = $(e.target).attr('data-id');
+                $.ajax({
+                    url: `${host}/order?id=${id}`,
+                    type: 'delete',
+                    success: () => {
+                        $(e.target).closest('tr').hide();
+                    }
+                })
+            })
+        };
+        let actionOnUpdateButtons = () => {
+            $('.update-btn').click((e) => {
+                let $btn = $(e.target);
+                let id = $btn.attr('data-id');
+                let state = ($btn.parent().siblings('.state').html() === true)?1:0;
+                $stateInput.val(state);
+                $sumInput.val($btn.parent().siblings('.sum').html());
+                $discountInput.val($btn.parent().siblings('.discount').html());
+                $placeInput.val($btn.parent().siblings('.table').html());
+                 // отримати дані по ід ордера
+                $stateInput.attr('data-id', id);
+                $modal.modal('open');
+            })
+        };
+        let getElements = () => {
+            tableBody.html('');
+            $.ajax({
+                url: `${host}/order`,
+                type: 'get',
+                success: (response) => {
+                    for (let elem of response) {
+                        appendElementToTable(elem);
+                    }
+                    actionOnDeleteButtons();
+                    actionOnUpdateButtons();
+                }
+            });
+        };
+
+        let getCurrentOrder = () => {
+            $.ajax({
+                url: `${host}/order/current`,
+                type: 'get',
+                success: (response) => {
+                    // поточні продукти в ордері треба десь зберегти
+                    // пізніше при вигрузці всіх продуктів треба пробігти і зповнити каунт тим які вже містяться в оредрі
+                }
+            });
+        };
+
+        getElements();
+        getWorkers();
+        getProducts();
+    });
+</script>
+</body>
+</html>

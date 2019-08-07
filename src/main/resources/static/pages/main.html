@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Front runner</title>
+    <link rel="SHORTCUT ICON" href="images/favicon.ico" type="image/ico">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <style>
+        body {
+            background-color: wheat;
+        }
+        .page-size-sort {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .input-field {
+            width: 100px;
+        }
+
+        .page-controllers {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .page-number {
+            margin: 0 10px;
+            font-size: 20px;
+        }
+
+        .card {
+            width: 300px;
+            height: 300px;
+        }
+
+        .column {
+            float: left;
+            width: 20.00%;
+        }
+
+        /* Clear floats after the columns */
+        .row:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .row {
+
+            align-items: center;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="col s12">
+    <select class="targetR" id="selector">
+
+    </select>
+    <label>Your restaurants</label>
+</div>
+
+<div class="row">
+    <div id="create-modal-restaurant" class="modal">
+        <div class="modal-content">
+            <input type="text" id="new-name" placeholder="restaurant's name">
+            <input type="text" id="new-address" placeholder="address">
+        </div>
+        <div class="modal-footer">
+            <button class="btn" id="create-button-restaurant">
+                Submit
+            </button>
+            <button class="btn" id="cancel-button-restaurant">
+                Cancel
+            </button>
+        </div>
+    </div>
+    <button data-target="create-modal-restaurant" class="btn modal-trigger">Create restaurant</button>
+    <div id="create-modal-place" class="modal">
+        <div class="modal-content">
+            <input type="number" id="new-number" placeholder="table's number">
+        </div>
+        <div class="modal-footer">
+            <button class="btn" id="create-button-place">
+                Submit
+            </button>
+            <button class="btn" id="cancel-button-place">
+                Cancel
+            </button>
+        </div>
+    </div>
+    <button data-target="create-modal-place" class="btn modal-trigger">Create table</button>
+
+    <div class="page-size-sort">
+
+        <div class="input-field">
+            <select class="page-size">
+                <option value="9" selected>3x3</option>
+                <option value="16">4x4</option>
+                <option value="25">5x5</option>
+            </select>
+            <label>Page size</label>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="page-controllers">
+    <button class="btn btn-prev">prev</button>
+    <span class="page-number">1</span>
+    <button class="btn btn-next">next</button>
+</div>
+
+<div class="col s12 m6" id="grid">
+</div>
+
+<script>
+    let selector = $('#selector');
+    let host = 'http://localhost:8080';
+
+    let $pageNumber = $('.page-number');
+    let $pageSize = $('.page-size');
+    let pages = 0;
+
+    let grid = $('#grid');
+
+    const userId = window.localStorage.getItem('userId');
+    let restaurantId = window.localStorage.getItem('restaurantId');
+    let size = (window.localStorage.getItem('size')===null)?9:+window.localStorage.getItem('size');
+
+
+    $(document).ready(function(){
+        window.localStorage.setItem('size', size);
+
+        let $modal = $('#create-modal-restaurant');
+        let $nameInput = $('#new-name');
+        let $addressInput = $('#new-address');
+        $modal.modal({
+            onCloseStart: () => {
+                $nameInput.val('');
+                $addressInput.val('');
+                $nameInput.attr('data-id', '');
+            }
+        });
+
+        let $modal2 = $('#create-modal-place');
+        let $numberInput = $('#new-number');
+        $modal2.modal({
+            onCloseStart: () => {
+                $numberInput.val('');
+                $numberInput.attr('data-id', '');
+            }
+        });
+        getRestaurans();
+        getElements();
+
+
+    $('#cancel-button-restaurant').click(() => {
+        $modal.modal('close');
+    });
+    $('#create-button-restaurant').click(() => {
+        console.log($nameInput.attr('data-id'));
+        if ($nameInput.val().length < 3) {
+            return;
+        }
+        let request = {
+            name: $nameInput.val(),
+            address: $addressInput.val(),
+            userId: userId
+        };
+        let id = $nameInput.attr('data-id');
+
+        if (id) {
+            $.ajax({
+                url: `${host}/restaurant?id=${id}`,
+                type: 'put',
+                contentType: 'application/json',
+                data: JSON.stringify(request),
+                success: function () {
+                    getRestaurans();
+                },
+                error: console.log
+            });
+        } else {
+            $.ajax({
+                url: `${host}/restaurant`,
+                type: 'post',
+                contentType: 'application/json',
+                data: JSON.stringify(request),
+                success: function () {
+                    getRestaurans();
+                },
+                error: console.log
+            });
+        }
+        $modal.modal('close');
+    });
+
+        $('.btn-next').click(() => {
+            let currentPage = +$pageNumber.html();
+            if (currentPage < pages) {
+                $pageNumber.html(currentPage + 1);
+                getElements();
+            }
+        });
+        $('.btn-prev').click(() => {
+            let currentPage = +$pageNumber.html();
+            if (currentPage > 1) {
+                $pageNumber.html(currentPage - 1);
+                getElements();
+            }
+        });
+
+
+    $('#cancel-button-place').click(() => {
+        $modal2.modal('close');
+    });
+    $('#create-button-place').click(() => {
+        console.log($numberInput.attr('data-id'));
+        let request = {
+            number: $numberInput.val(),
+            restaurantId: restaurantId//+selector.val(),
+        };
+        let id = $numberInput.attr('data-id');
+
+        if (id) {
+            $.ajax({
+                url: `${host}/place?id=${id}`,
+                type: 'put',
+                contentType: 'application/json',
+                data: JSON.stringify(request),
+                success: function () {
+                    getElements();
+                },
+                error: console.log
+            });
+        } else {
+            $.ajax({
+                url: `${host}/place`,
+                type: 'post',
+                contentType: 'application/json',
+                data: JSON.stringify(request),
+                success: function () {
+                    getElements();
+                },
+                error: console.log
+            });
+        }
+        $modal2.modal('close');
+
+    });
+
+    });
+
+    let getRestaurans = () => {
+        let url = "http://localhost:8080/restaurant/allByUser?userId=" + userId;
+
+        selector.html('');
+        selector.append(`<option value="" disabled selected>Choose your restaurant to manage</option>`);
+
+        $.ajax({
+
+            url: url,
+            type: 'get',
+            success: (response) => {
+                for (let restaurant of response) {
+                        selector.append(`<option value=${restaurant.id}>${restaurant.name} (${restaurant.address})</option>`);
+
+                };
+                $('select').formSelect();
+            }
+        });
+       // selector.val(restaurantId);
+    };
+
+    let getElements = () => {
+
+        $('#grid').html('');
+        let paginationRequest = {
+            direction: "ASC",
+            field: "number",
+            page: +$pageNumber.html() - 1,
+            size: size
+        };
+        let request = {
+            paginationRequest: paginationRequest,
+            restaurantId: restaurantId//+selector.val()
+        };
+        $.ajax({
+            //url: `http://localhost:8080/place?page=${$pageNumber.html() - 1}&size=${$pageSize.val()}&field=number&direction=ASC`,
+            //type: 'get',
+            url: `${host}/place/findByFilter`,
+            type: 'post',
+            contentType: 'application/json',
+            data: JSON.stringify(request),
+            success: (res) => {
+               //console.log(res);
+                pages = res.totalPages;
+                if (+$pageNumber.html() === pages) {
+                    $('.btn-next').attr('disabled', 'true');
+                } else {
+                    $('.btn-next').removeAttr('disabled');
+                }
+                appendPlaces(res.data);
+                actionOnCreateButton();
+                actionOnEditButton();
+                actionOnCloseButton();
+            }
+        })
+    };
+
+    let appendPlaces = (places) => {
+        let i = 0;
+        for (const place of places) {
+
+            if (+i === 0) {
+                console.log()
+                appendRowStart();
+            };
+
+            i = i + 1;
+            appendTable(place);
+
+            if ((size === 9 && i === 3) || (size === 16 && i === 4) || (size === 25 && i === 5)) {
+                i = 0;
+            };
+
+        }
+
+    };
+
+    let appendRowStart = () => {
+        grid.append(`<div class="row">
+                     <div>`);
+    };
+
+
+    let appendTable = (tableInfo) => {
+
+        var order;
+
+        $.ajax({
+            async: false,
+            url: `http://localhost:8080/order/byTableId?placeId=${tableInfo.id}`,
+            type: 'get',
+            success: function (data) {
+                order = data;
+            },
+            error: function (e) {
+                order = null;
+            }
+        });
+
+        if (order!==null) {
+            grid.append(`<div class="column">
+                <div class="card red darken-1">
+                <div class="card-content white-text">
+                <span class="card-title">Стіл №${tableInfo.number}</span>
+            <p>Ресторан: ${tableInfo.restaurant.name}</p>
+            <p>Сума замовлення: ${order.sum}</p>
+            <p>Всього позицій: ${order.products.length}</p>
+            </div>
+            <input type="hidden" id="placeId" name="placeId" value=${tableInfo.id}>
+            <div class="card-action">
+                <p>
+                <button data-id="${tableInfo.id}" class="edit-order btn">Modify order</button>
+                </p>
+                <p>
+                <button data-id="${tableInfo.id}" class="close-order btn">Close order</button>
+                </p>
+            </div>
+            </div>
+            </div>`);
+        } else {
+            grid.append(`<div class="column">
+                <div class="card green darken-1">
+                <div class="card-content white-text">
+                <span class="card-title">Стіл №${tableInfo.number}</span>
+            <p>Ресторан: ${tableInfo.restaurant.name}</p>
+            </div>
+            <input type="hidden" id="placeId" name="placeId" value=${tableInfo.id}>
+            <div class="card-action">
+                <p>
+                <button data-id="${tableInfo.id}" class="create-order btn">Create order</button>
+                </p>
+            </div>
+            </div>
+            </div>`);
+        }
+
+
+    };
+
+
+
+    $( ".targetR" ).change(function() {
+        window.localStorage.setItem('restaurantId', selector.val());
+        restaurantId = window.localStorage.getItem('restaurantId');
+        $pageNumber.html(1);
+        getElements();
+    });
+
+    $( ".page-size" ).change(function() {
+        window.localStorage.setItem('size', +$pageSize.val());
+        size = +$pageSize.val();
+        getElements();
+    });
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    let actionOnCreateButton = () => {
+        $('.create-order').click((e) => {
+            let $btn = $(e.target);
+            let tableId = $btn.attr('data-id');
+
+            window.localStorage.setItem('tableId', tableId);
+            window.localStorage.setItem('orderId', 0);
+
+            window.location.href = "http://localhost:8080/management"
+
+            // відкрити форму створення нового ордера (передати туди - плейс ід)
+            // наповнити замовлення або скасувати
+            // перевантажити дану сторінку
+        });
+    };
+
+    let actionOnEditButton = () => {
+        $('.edit-order').click((e) => {
+            // відкрити форму редагування існуючого ордера (передати туди - плейс ід)
+            // наповнити замовлення або скасувати зміни
+            // перевантажити дану сторінку
+            let $btn = $(e.target);
+            let tableId = $btn.attr('data-id');
+
+            window.localStorage.setItem('tableId', tableId);
+
+
+            var order;
+
+            $.ajax({
+                async: false,
+                url: `http://localhost:8080/order/byTableId?placeId=${tableId}`,
+                type: 'get',
+                success: function (data) {
+                    order = data;
+                }
+            });
+
+            window.localStorage.setItem('orderId', order.id);
+
+            window.location.href = "http://localhost:8080/management"
+        });
+    };
+
+    let actionOnCloseButton = () => {
+        $('.close-order').click((e) => {
+            // не переходячи на сторінку редагування ордера
+            // відправити запит ПОСТ з полем closed=true
+            // перезавантажити дану сторінку
+
+            let $btn = $(e.target);
+            let tableId = $btn.attr('data-id');
+
+            window.localStorage.setItem('tableId', tableId);
+            window.localStorage.setItem('orderId', 0);
+
+            var order;
+
+            $.ajax({
+                async: false,
+                url: `http://localhost:8080/order/byTableId?placeId=${tableId}`,
+                type: 'get',
+                success: function (data) {
+                    order = data;
+                }
+            });
+
+            let workersList = [];
+            for (let workerResponse of order.workers) {
+                workersList.push(workerResponse.id);
+            }
+
+            let productList = [];
+            for (let productCountResponse of order.products) { // productCount
+                productList.push({
+                    productId: productCountResponse.productResponse.id,
+                    count: productCountResponse.count
+                });
+            }
+
+            let request = {
+                closed: true,
+                sum: order.sum,
+                discount: order.discount,
+                placeId: order.place.id,
+                workersId: workersList,
+                products: productList
+            };
+
+                $.ajax({
+                    url: `${host}/order?id=${order.id}`,
+                    type: 'put',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function () {
+                        getElements();
+                    },
+                    error: console.log
+                });
+
+
+            // створюємо реквест де всі поля будуть без змін - міняється тільки клозед
+        });
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+</script>
+</body>
+</html>
